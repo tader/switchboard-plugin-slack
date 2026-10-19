@@ -1,12 +1,22 @@
 ---
-title: Connect Slack with an official app
+title: Connect Slack
 services: [slack]
 order: 1
 ---
 
 # Connect Slack
 
-This plugin uses an official Slack app's user OAuth flow. Calls act as you, within the scopes granted to the app and your workspace permissions. Workspace administrators may require app approval. No bot or local authentication companion is required.
+Choose **Use Slack Authentication** to reuse a browser or macOS desktop session without installing a Slack app, or **Sign in with Slack** for official user OAuth. Both methods act as you within your workspace permissions and independently enforce the selected read-only/read/write mode.
+
+## Browser or desktop session (no Slack app)
+
+Install `plugins/slack-authentication` from this repository on your sign-in computer. Add a **Slack Authentication** connection, enter your workspace URL, and choose the local Slack desktop session (macOS) or browser sign-in. Then add a **Slack** connection, choose **Use Slack Authentication**, select that source and an access level. No client ID or secret is needed.
+
+For remote use, share the source through Peers and explicitly enable **Share authentication**. See the [authentication setup guide](../../slack-authentication/docs/setup.md) for caching, Keychain access, session renewal and sharing. The guide is also available in the installed Slack Authentication plugin. Your organization's session restrictions still apply.
+
+## Official OAuth alternative
+
+Official OAuth uses an app's granted user scopes. Workspace administrators may require app approval.
 
 ## Create the app
 
@@ -26,7 +36,7 @@ See Slack's [user OAuth flow](https://docs.slack.dev/authentication/installing-w
 4. Complete Slack's authorization in your browser. The resulting identity is bound to both workspace and user. Add another connection for another workspace/account; reconnecting cannot silently switch an existing connection to someone else.
 5. Call `getSlackStatus` to test identity without reading messages. `renew=true` exercises rotation for expiring tokens. Non-rotating tokens are validated without requesting another sign-in.
 
-You can authorize directly on a remote Switchboard. Received connections shared through Peers use the existing Switchboard connection-sharing controls; OAuth credentials remain on the instance owning the connection. This plugin does not add credential-export or authentication-source sharing.
+You can authorize directly on a remote Switchboard. Received connections shared through Peers use the existing Switchboard connection-sharing controls; OAuth credentials remain on the instance owning the connection. The browser/desktop source method described above separately supports explicitly granted authentication sharing.
 
 ## Permissions and reconnection
 

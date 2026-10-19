@@ -1,3 +1,4 @@
+import { createWebAuth } from "./web-auth.js";
 import { fail } from "./errors.js";
 export const READ_SCOPES = [
   "channels:read",
@@ -91,6 +92,8 @@ export function createAuth(ctx, client) {
     };
   }
   async function usable(conn, opts = {}) {
+    if (conn.methodId === "authentication-source")
+      return web.usable(conn, opts);
     const c = conn.credentials;
     if (!c?.accessToken || c.clientId !== ctx.settings.clientId)
       throw fail("reconnect_required", 401);
@@ -165,5 +168,6 @@ export function createAuth(ctx, client) {
       return { credentials, account, config: { access: pending.access } };
     },
   };
-  return { method, usable, identity };
+  const web = createWebAuth(ctx, client, identity);
+  return { method, methods: [web.method, method], usable, identity };
 }

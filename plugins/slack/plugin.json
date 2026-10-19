@@ -2,10 +2,11 @@
   "id": "slack",
   "name": "Slack",
   "version": "1.0.0",
-  "description": "Slack user OAuth, conversations, search, messaging and explicit unread triage.",
-  "dependencies": ["oauth2"],
+  "description": "Slack web sessions or official user OAuth, conversations, search, messaging and explicit unread triage.",
+  "dependencies": ["oauth2", "slack-authentication"],
   "dependencyVersions": {
-    "oauth2": "^1.0.0"
+    "oauth2": "^1.0.0",
+    "slack-authentication": "^1.0.0"
   },
   "icon": "icon.svg",
   "settings": [

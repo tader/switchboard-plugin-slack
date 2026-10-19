@@ -27,6 +27,11 @@ fs.mkdirSync(path.join(archiveRoot, "plugins"), { recursive: true });
 fs.cpSync("plugins/slack", path.join(archiveRoot, "plugins/slack"), {
   recursive: true,
 });
+fs.cpSync(
+  "plugins/slack-authentication",
+  path.join(archiveRoot, "plugins/slack-authentication"),
+  { recursive: true },
+);
 const tar = createRequire(path.join(core, "package.json"))("tar"),
   archive = path.join(dir, "slack.tgz");
 await tar.c({ gzip: true, file: archive, cwd: dir }, ["archive-root"]);
@@ -90,6 +95,13 @@ try {
   );
   await (
     await load("server/plugins/github.ts")
+  ).install(
+    { repo: "fixture/slack", path: "plugins/slack-authentication" },
+    { user },
+  );
+  assert.equal(manager.get("slack-authentication").status, "active");
+  await (
+    await load("server/plugins/github.ts")
   ).install({ repo: "fixture/slack", path: "plugins/slack" }, { user });
   assert.equal(manager.get("slack").status, "active");
   assert.equal(manager.get("slack").source.commit, sha);
@@ -144,6 +156,92 @@ try {
   r = await execute(user, connection.id, { method: "GET", url: "/" });
   assert.equal((await r.response.json()).ready, true);
   assert.equal(refreshes, 1, "restart reuses the persisted session");
+  const sourceId = "fixture-slack-source",
+    webBundle = {
+      kind: "web",
+      accessToken: "xoxc-fixture-web-session",
+      cookie: "xoxd-fixture-session-cookie",
+      userAgent: "fixture-agent",
+      teamId: "T12345678",
+      userId: "U12345678",
+      validatedAt: Date.now(),
+    };
+  database.run(
+    `INSERT INTO connections (id,user_id,service_id,method_id,name,account_id,account_label,config_enc,credentials_enc,created_at,updated_at,kind) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    sourceId,
+    user.id,
+    "slack-authentication",
+    "browser",
+    "fixture-slack-source",
+    "T12345678:U12345678",
+    "Fixture",
+    crypto.encrypt({ workspaceUrl: "https://fixture.slack.com/" }),
+    crypto.encrypt({
+      profile: "00000000-0000-4000-8000-000000000000",
+      selected: {
+        host: "fixture.slack.com",
+        url: "https://fixture.slack.com/",
+      },
+      bundle: webBundle,
+    }),
+    Date.now(),
+    Date.now(),
+    "http",
+  );
+  r = await execute(user, sourceId, { method: "GET", url: "/" });
+  assert.equal(
+    r.response.status,
+    200,
+    "source root health check uses identity only",
+  );
+  assert.equal((await r.response.json()).ok, true);
+  const webFlow = await connections.startConnect(user, {
+    service: "slack",
+    method: "authentication-source",
+    config: { authenticationSource: sourceId, access: "read" },
+  });
+  assert.equal(webFlow.status, "connected");
+  r = await execute(user, webFlow.connection.id, {
+    method: "GET",
+    url: "/status?renew=true",
+  });
+  assert.equal((await r.response.json()).ready, true);
+  const encrypted = database.one(
+    "SELECT credentials_enc FROM connections WHERE id=?",
+    webFlow.connection.id,
+  ).credentials_enc;
+  assert(!encrypted.includes("xoxc-"));
+  assert(!encrypted.includes("xoxd-"));
+  assert.equal(crypto.decrypt(encrypted).cookie, webBundle.cookie);
+  await manager.stop();
+  await manager.start();
+  r = await execute(user, webFlow.connection.id, {
+    method: "GET",
+    url: "/status",
+  });
+  assert.equal((await r.response.json()).ready, true);
+  // Observed removal of a source prevents use of even still-valid cached credentials.
+  database.run("DELETE FROM connections WHERE id=?", sourceId);
+  await assert.rejects(
+    execute(user, webFlow.connection.id, { method: "GET", url: "/status" }),
+  );
+  const sourceMethods = manager.service("slack-authentication").authMethods;
+  assert(
+    sourceMethods.some(
+      (m) =>
+        m.id === "desktop" &&
+        m.credentialProvider.format === "slack/web-session/v1",
+    ),
+  );
+  assert(
+    manager
+      .service("slack")
+      .authMethods.some(
+        (m) =>
+          m.id === "authentication-source" &&
+          m.credentialConsumer.field === "authenticationSource",
+      ),
+  );
   console.log(
     "PASS: actual GitHub installer, plugin manager, OAuth callback, proxy, API discovery, refresh persistence and restart; fixture providers only",
   );

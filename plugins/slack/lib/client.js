@@ -31,6 +31,15 @@ export class SlackClient {
   }
   async call(credentials, method, args = {}, signal) {
     if (!METHODS.has(method)) throw fail("unsupported_method");
+    if (
+      credentials.kind === "web" &&
+      (!/^xoxc-[A-Za-z0-9-]{10,2048}$/.test(credentials.accessToken) ||
+        !/^xoxd-[A-Za-z0-9%_+\/=-]{10,8192}$/.test(credentials.cookie) ||
+        typeof credentials.userAgent !== "string" ||
+        /[\r\n]/.test(credentials.userAgent) ||
+        credentials.userAgent.length > 1024)
+    )
+      throw fail("invalid_session", 401);
     const key = `${credentials.teamId}:${method}`,
       now = Date.now();
     if ((this.cooldowns.get(key) ?? 0) > now)
@@ -45,6 +54,14 @@ export class SlackClient {
         headers: {
           authorization: `Bearer ${credentials.accessToken}`,
           "content-type": "application/json",
+          ...(credentials.kind === "web"
+            ? {
+                cookie: `d=${credentials.cookie}`,
+                ...(credentials.userAgent
+                  ? { "user-agent": credentials.userAgent }
+                  : {}),
+              }
+            : {}),
         },
         body: JSON.stringify(args),
         redirect: "error",

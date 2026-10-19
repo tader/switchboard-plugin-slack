@@ -114,46 +114,45 @@ export async function createAdapter(ctx, { client = new SlackClient() } = {}) {
       {
         id: "slack",
         name: "Slack",
-        description: "Official Slack user OAuth, messaging and triage",
+        description:
+          "Slack web sessions or official user OAuth, messaging and triage",
         icon: "icon.svg",
         baseUrl: "http://slack.localhost",
         allowedHosts: ["slack.localhost", origin.host],
         openapi,
-        authMethods: [
-          {
-            ...auth.method,
-            async authorize(req, conn, opts = {}) {
-              if (closed) throw fail("plugin_unavailable", 503);
-              if (
-                !["slack.localhost", origin.host].includes(req.url.host) ||
-                req.url.protocol !== "http:" ||
-                req.url.username ||
-                req.url.password
-              )
-                throw fail("request_forbidden", 403);
-              const op = route(req.method, req.url);
-              if (!op) throw fail("request_forbidden", 403);
-              if (invocations.size >= 1024) throw fail("adapter_busy", 503);
-              const credentials = await auth.usable(conn, {
-                ...opts,
-                force:
-                  opts.force ||
-                  (op.id === "getSlackStatus" &&
-                    req.url.searchParams.get("renew") === "true"),
-              });
-              const key = randomBytes(32).toString("base64url");
-              invocations.set(key, {
-                conn: { ...conn, credentials },
-                method: req.method,
-                path: req.url.pathname + req.url.search,
-                expires: Date.now() + 30_000,
-              });
-              req.url.host = origin.host;
-              req.headers.set("authorization", `Bearer ${key}`);
-              if (credentials !== conn.credentials) return { credentials };
-            },
+        authMethods: auth.methods.map((method) => ({
+          ...method,
+          async authorize(req, conn, opts = {}) {
+            if (closed) throw fail("plugin_unavailable", 503);
+            if (
+              !["slack.localhost", origin.host].includes(req.url.host) ||
+              req.url.protocol !== "http:" ||
+              req.url.username ||
+              req.url.password
+            )
+              throw fail("request_forbidden", 403);
+            const op = route(req.method, req.url);
+            if (!op) throw fail("request_forbidden", 403);
+            if (invocations.size >= 1024) throw fail("adapter_busy", 503);
+            const credentials = await auth.usable(conn, {
+              ...opts,
+              force:
+                opts.force ||
+                (op.id === "getSlackStatus" &&
+                  req.url.searchParams.get("renew") === "true"),
+            });
+            const key = randomBytes(32).toString("base64url");
+            invocations.set(key, {
+              conn: { ...conn, credentials },
+              method: req.method,
+              path: req.url.pathname + req.url.search,
+              expires: Date.now() + 30_000,
+            });
+            req.url.host = origin.host;
+            req.headers.set("authorization", `Bearer ${key}`);
+            if (credentials !== conn.credentials) return { credentials };
           },
-        ],
+        })),
       },
     ],
     async dispose() {

@@ -26,35 +26,43 @@ export class SlackService {
         .split(/[ ,]+/)
         .filter(Boolean),
     );
+    const web = c.kind === "web";
     const capabilities = {
+      authentication: web ? "web-session" : "oauth",
+      permissionCoverage: web
+        ? "native_session_permissions_checked_by_slack"
+        : "oauth_scopes",
       workspace: c.teamId,
       user: c.userId,
       access: conn.config.access,
       scopes: [...granted],
-      canWrite: conn.config.access === "write" && granted.has("chat:write"),
+      canWrite:
+        conn.config.access === "write" && (web || granted.has("chat:write")),
       canMarkRead:
         conn.config.access === "write" &&
-        WRITE_SCOPES.slice(2).some((s) => granted.has(s)),
+        (web || WRITE_SCOPES.slice(2).some((s) => granted.has(s))),
       markUnread: false,
       nativeUnreadCoverage: "only_where_returned",
       automaticReadMarkers: false,
     };
     capabilities.features = {
-      search: granted.has("search:read"),
-      users: granted.has("users:read"),
+      search: web || granted.has("search:read"),
+      users: web || granted.has("users:read"),
       history: Object.fromEntries(
         ["channels", "groups", "im", "mpim"].map((kind) => [
           kind,
-          granted.has(`${kind}:history`),
+          web || granted.has(`${kind}:history`),
         ]),
       ),
       send: capabilities.canWrite,
       reactions:
-        conn.config.access === "write" && granted.has("reactions:write"),
+        conn.config.access === "write" &&
+        (web || granted.has("reactions:write")),
       markRead: Object.fromEntries(
         ["channels", "groups", "im", "mpim"].map((kind) => [
           kind,
-          conn.config.access === "write" && granted.has(`${kind}:write`),
+          conn.config.access === "write" &&
+            (web || granted.has(`${kind}:write`)),
         ]),
       ),
     };

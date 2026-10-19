@@ -22,10 +22,22 @@ for (const op of operations)
     openapi.paths[op.path][op.method.toLowerCase()].operationId,
     op.id,
   );
-for (const root of ["plugins/slack/lib", "scripts", "test"])
+for (const root of [
+  "plugins/slack/lib",
+  "plugins/slack-authentication/lib",
+  "scripts",
+  "test",
+])
   for (const f of fs.readdirSync(root))
     if (f.endsWith(".js"))
       execFileSync(process.execPath, ["--check", `${root}/${f}`]);
 console.log(
   `Validated ${operations.length} Slack operations and plugin manifest`,
+);
+
+assert.equal(
+  JSON.parse(
+    fs.readFileSync("plugins/slack-authentication/plugin.json", "utf8"),
+  ).version,
+  manifest.version,
 );
