@@ -83,7 +83,7 @@ export const operations = [
     "/users",
     "listSlackUsers",
     "List workspace users; pass nextCursor as cursor",
-    { ...list },
+    { ...list, limit: { ...limit, maximum: 200 } },
   ],
   [
     "GET",

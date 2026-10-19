@@ -17,6 +17,19 @@ export const METHODS = new Set([
   "reactions.remove",
   "conversations.mark",
 ]);
+// Slack's legacy read/search endpoints do not consistently parse JSON bodies.
+// Keep JSON for mutations, and put read parameters in a form body (never the URL).
+const FORM_METHODS = new Set([
+  "auth.test",
+  "users.info",
+  "users.list",
+  "users.conversations",
+  "conversations.info",
+  "conversations.history",
+  "conversations.replies",
+  "search.messages",
+  "chat.getPermalink",
+]);
 const AUTH = new Set([
   "invalid_auth",
   "token_expired",
@@ -47,13 +60,23 @@ export class SlackClient {
         retryAfter: Math.ceil((this.cooldowns.get(key) - now) / 1000),
         definitive: true,
       });
+    const form = FORM_METHODS.has(method);
+    const body = form
+      ? new URLSearchParams(
+          Object.entries(args)
+            .filter(([, value]) => value !== undefined && value !== null)
+            .map(([key, value]) => [key, String(value)]),
+        ).toString()
+      : JSON.stringify(args);
     let response;
     try {
       response = await this.fetcher(`https://slack.com/api/${method}`, {
         method: "POST",
         headers: {
           authorization: `Bearer ${credentials.accessToken}`,
-          "content-type": "application/json",
+          "content-type": form
+            ? "application/x-www-form-urlencoded"
+            : "application/json",
           ...(credentials.kind === "web"
             ? {
                 cookie: `d=${credentials.cookie}`,
@@ -63,7 +86,7 @@ export class SlackClient {
               }
             : {}),
         },
-        body: JSON.stringify(args),
+        body,
         redirect: "error",
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])

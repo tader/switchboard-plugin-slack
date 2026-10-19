@@ -35,3 +35,9 @@ The plugin journals write intent before the API request, then saves a receipt. I
 The journal is under this plugin's data directory, in `operations/<account-hash>/`. It stores hashed request fingerprints and small receipts, not message bodies or tokens, with owner-only permissions. Preserve it across restarts, upgrades and reconnection. Never remove it merely to clear an uncertain outcome. At 10,000 records, writes stop until an administrator archives the journal after reconciling outstanding operations.
 
 A `.lock` directory prevents concurrent processes from submitting the same operation. If a crash leaves it behind, stop the plugin, reconcile outstanding journal records against Slack, and remove only the stale `.lock` directory before restarting. Keep all journal records so accepted and uncertain operations retain protection. Do not run two Switchboard instances against the same plugin-data directory.
+
+## Discovery and pagination
+
+Conversation/history pages allow up to 100 items; workspace user pages allow up to 200. Pass `nextCursor` back as `cursor` with the same filters. Slack can return fewer items than requested, including an empty filtered page with a nonempty cursor. Continue while `nextCursor` is present; `hasMore` includes cursor availability. The plugin does not download a full workspace roster or silently truncate it to implement a small page.
+
+Search uses `page` and `count`; pass `nextPage` back as `page`. Read/search arguments are sent in form-encoded request bodies for both web sessions and OAuth, because Slack does not consistently parse JSON for these methods. Tokens remain in authorization headers. Mutation request encoding is unchanged.

@@ -81,7 +81,7 @@ export class SlackService {
     const page = (data, field) => ({
       items: data[field] ?? [],
       nextCursor: data.response_metadata?.next_cursor || null,
-      hasMore: !!data.has_more,
+      hasMore: !!data.response_metadata?.next_cursor || !!data.has_more,
     });
     if (op.id === "listSlackConversations") {
       const types = input.types ?? "public_channel,private_channel,im,mpim";
