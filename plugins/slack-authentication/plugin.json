@@ -1,0 +1,13 @@
+{
+  "id": "slack-authentication",
+  "name": "Slack Authentication",
+  "version": "1.0.0",
+  "description": "Cached Slack browser or macOS desktop session for local and explicitly shared peer connections.",
+  "icon": "icon.svg",
+  "settings": [
+    {
+      "key": "browserPath",
+      "label": "Chrome or Edge executable (optional)"
+    }
+  ]
+}
