@@ -1,0 +1,22 @@
+{
+  "id": "slack",
+  "name": "Slack",
+  "version": "1.0.0",
+  "description": "Slack user OAuth, conversations, search, messaging and explicit unread triage.",
+  "dependencies": ["oauth2"],
+  "dependencyVersions": {
+    "oauth2": "^1.0.0"
+  },
+  "icon": "icon.svg",
+  "settings": [
+    {
+      "key": "clientId",
+      "label": "Slack application client ID"
+    },
+    {
+      "key": "clientSecret",
+      "label": "Slack application client secret",
+      "type": "secret"
+    }
+  ]
+}

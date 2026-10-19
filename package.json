@@ -1,0 +1,16 @@
+{
+  "name": "switchboard-plugin-slack",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "check": "tsc --noEmit && node scripts/check.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
+    "integration": "node --disable-warning=ExperimentalWarning scripts/integration.js",
+    "check:access": "node scripts/check-access.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
