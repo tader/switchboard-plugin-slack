@@ -1,3 +1,4 @@
+import { createMessaging } from "./messaging.js";
 import http from "node:http";
 import { randomBytes } from "node:crypto";
 import { SlackClient } from "./client.js";
@@ -120,6 +121,7 @@ export async function createAdapter(ctx, { client = new SlackClient() } = {}) {
         baseUrl: "http://slack.localhost",
         allowedHosts: ["slack.localhost", origin.host],
         openapi,
+        contracts: createMessaging(ctx.dataDir),
         authMethods: auth.methods.map((method) => ({
           ...method,
           async authorize(req, conn, opts = {}) {

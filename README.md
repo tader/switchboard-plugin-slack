@@ -14,7 +14,7 @@ OAuth can run directly on a remote Switchboard. Browser and desktop sources can 
 
 ## Tools
 
-The plugin exposes 19 documented operations in Switchboard's Console and MCP discovery:
+The plugin exposes 21 documented operations in Switchboard's Console and MCP discovery:
 
 - Authentication status/renewal and capability reporting.
 - Paginated conversations, messages, threads, users, message search, and message permalinks.
@@ -26,6 +26,14 @@ Slack's native unread fields are not available for every conversation type. Miss
 
 Writes require stable idempotency keys. Repeating an accepted operation returns its saved receipt; changing its content with the same key is rejected. An uncertain result blocks automatic resending. See [operation and recovery details](plugins/slack/docs/operations.md).
 
+## Shared Messaging contract (staged)
+
+Alongside the existing API, the plugin implements the optional provider-independent
+Messaging v1 contract in [Switchboard #40](https://github.com/tader/switchboard/pull/40).
+See [contract coverage and limitations](plugins/slack/docs/messaging-contract.md).
+The core feature remains disabled by default. Native Slack push is not configured
+by this change; the contract advertises bounded reconciliation instead.
+
 ## Development
 
 ```sh
@@ -33,6 +41,7 @@ npm ci
 npm run check
 npm test
 SWITCHBOARD_ROOT=/path/to/switchboard npm run integration
+SWITCHBOARD_ROOT=/path/to/staged-contract-core npm run integration:contracts
 ```
 
 The integration test uses the actual Switchboard installer, plugin manager, OAuth helper, proxy and API parser with temporary state and fixture providers. It verifies OAuth refresh persistence, encrypted web-session source selection, source removal and restart without accessing a live workspace. Desktop import was additionally validated against a signed-in macOS Slack session using only identity metadata; browser sign-in has fixture coverage. CI uses Node 24 and a pinned Switchboard core revision.

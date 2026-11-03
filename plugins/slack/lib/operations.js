@@ -25,7 +25,13 @@ const schema = (properties, required = []) => ({
   additionalProperties: false,
 });
 const target = { channel, ts, threadTs: ts };
-const message = { channel, text, threadTs: ts, idempotencyKey: key };
+const message = {
+  channel,
+  text,
+  threadTs: ts,
+  plainText: { type: "boolean", default: false },
+  idempotencyKey: key,
+};
 const mutation = {
   ...target,
   expectedText: str("Expected current message text.", { maxLength: 4000 }),
@@ -36,6 +42,22 @@ const list = {
   cursor: str("Pass nextCursor from the previous result."),
 };
 export const operations = [
+  [
+    "GET",
+    "/conversation",
+    "getSlackConversation",
+    "Read one conversation without changing read state",
+    { channel },
+    ["channel"],
+  ],
+  [
+    "GET",
+    "/message",
+    "getSlackMessage",
+    "Read an exact message target without changing read state",
+    { ...target },
+    ["channel", "ts"],
+  ],
   [
     "GET",
     "/status",

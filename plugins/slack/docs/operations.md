@@ -8,6 +8,10 @@ order: 2
 
 Discover the complete parameters and request schemas in the Console API reference or with `search_operations` → `get_operation` before calling a tool. All Slack message timestamps are strings, including their fractional digits. A target always includes its conversation ID; a reply also identifies its exact thread-root timestamp.
 
+`getSlackConversation` reads one conversation. `getSlackMessage` reads an exact
+message timestamp, optionally under `threadTs`, using an inclusive bounded lookup.
+Neither changes read state.
+
 ## Reading and triage
 
 `listSlackConversations`, `listSlackMessages`, `getSlackThread`, and `listSlackUsers` return `nextCursor`; pass it unchanged as `cursor`. `searchSlackMessages` returns `nextPage`, which is passed as `page`. Keep the other filters unchanged. A page is not the whole result set.
@@ -20,7 +24,8 @@ Slack rate limits are tracked per workspace and API method. A rate-limited respo
 
 ## Writing
 
-`postSlackMessage` sends text with native Slack mrkdwn, optionally into an existing thread. Threaded replies require an exact thread root. `replySlackBatch` processes at most 20 items and returns each success/error separately; a failed item does not erase an accepted reply. Use distinct keys per item.
+`postSlackMessage` sends text with native Slack mrkdwn, optionally into an existing thread. The optional `plainText=true` disables mrkdwn
+and escapes control markup; it defaults to false for existing callers. Threaded replies require an exact thread root. `replySlackBatch` processes at most 20 items and returns each success/error separately; a failed item does not erase an accepted reply. Use distinct keys per item.
 
 `editSlackMessage` and `deleteSlackMessage` require the expected current text and verify that you authored the message. Supply `threadTs` when the target is a thread reply. Reaction operations add or remove your reaction. `openSlackConversation` opens/resumes a DM or group DM.
 
