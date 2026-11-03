@@ -18,6 +18,23 @@
       "key": "clientSecret",
       "label": "Slack application client secret",
       "type": "secret"
+    },
+    {
+      "key": "socketMode",
+      "label": "Enable Socket Mode events",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "socketAppId",
+      "label": "Socket Mode Slack app ID",
+      "description": "App ID (A...) of the explicitly configured Events API app."
+    },
+    {
+      "key": "socketAppToken",
+      "label": "Socket Mode app-level token",
+      "type": "secret",
+      "description": "xapp token with connections:write and authorizations:read. Configure user event subscriptions in Slack first."
     }
   ]
 }

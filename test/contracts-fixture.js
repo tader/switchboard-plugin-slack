@@ -7,7 +7,10 @@ export const channelId = "C12345678",
   ownId = "U12345678",
   rootId = "1700000000.000001",
   replyId = "1700000001.000001";
-export async function contractsFixture(t) {
+export async function contractsFixture(
+  t,
+  { settings = {}, socketOptions } = {},
+) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "slack-contract-"));
   const calls = [];
   let custom;
@@ -48,8 +51,13 @@ export async function contractsFixture(t) {
       throw Error("Unexpected fixture method: " + method);
     },
   };
-  const ctx = { ...context(oauthFixture()), dataDir: dir };
-  const adapter = await createAdapter(ctx, { client }),
+  const base = context(oauthFixture());
+  const ctx = {
+    ...base,
+    settings: { ...base.settings, ...settings },
+    dataDir: dir,
+  };
+  const adapter = await createAdapter(ctx, { client, socketOptions }),
     service = adapter.services[0];
   t.after(async () => {
     await adapter.dispose();

@@ -108,7 +108,7 @@ export function projectMessage(m, conversationId, userId) {
       : {}),
   };
 }
-export function createMessaging(root) {
+export function createMessaging(root, nativeWatch) {
   const cursors = new MessagingCursors(root);
   async function request(ctx, path, input = {}, method = "GET") {
     const query = new URLSearchParams(
@@ -415,6 +415,20 @@ export function createMessaging(root) {
   );
   return {
     version: 1,
+    ...(nativeWatch
+      ? {
+          async watch(input, ctx) {
+            if (
+              !available(ctx.connection).some(
+                (name) => operations[name].readOnly,
+              )
+            )
+              throw fail("watch_not_supported", 501);
+            await request(ctx, "/status");
+            return nativeWatch(input, ctx);
+          },
+        }
+      : {}),
     operations,
     available,
     async collect(_input, ctx) {

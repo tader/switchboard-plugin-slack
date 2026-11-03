@@ -41,3 +41,21 @@ assert.equal(
   ).version,
   manifest.version,
 );
+
+const socketManifest = JSON.parse(
+  fs.readFileSync("plugins/slack/socket-mode-app-manifest.json", "utf8"),
+);
+assert.deepEqual(
+  socketManifest.oauth_config.scopes,
+  JSON.parse(fs.readFileSync("plugins/slack/app-manifest.json", "utf8"))
+    .oauth_config.scopes,
+);
+assert.equal(socketManifest.settings.socket_mode_enabled, true);
+const release = JSON.parse(
+  fs.readFileSync("release-please-config.json", "utf8"),
+).packages["."];
+assert.equal(release["release-type"], "node");
+assert.deepEqual(release["extra-files"].map((f) => f.path).sort(), [
+  "plugins/slack-authentication/plugin.json",
+  "plugins/slack/plugin.json",
+]);

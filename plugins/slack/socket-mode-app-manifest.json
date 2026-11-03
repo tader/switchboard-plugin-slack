@@ -1,0 +1,47 @@
+{
+  "display_information": {
+    "name": "Switchboard Slack",
+    "description": "Personal messaging and triage through Switchboard",
+    "background_color": "#4a154b"
+  },
+  "oauth_config": {
+    "redirect_urls": ["https://switchboard.example.com/oauth/callback"],
+    "scopes": {
+      "user": [
+        "channels:read",
+        "channels:history",
+        "groups:read",
+        "groups:history",
+        "im:read",
+        "im:history",
+        "mpim:read",
+        "mpim:history",
+        "users:read",
+        "search:read",
+        "reactions:read",
+        "chat:write",
+        "reactions:write",
+        "channels:write",
+        "groups:write",
+        "im:write",
+        "mpim:write"
+      ]
+    },
+    "pkce_enabled": false
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": true,
+    "event_subscriptions": {
+      "user_events": [
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "reaction_added",
+        "reaction_removed"
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ The plugin exposes 21 documented operations in Switchboard's Console and MCP dis
 - Send messages, edit/delete your own messages, add/remove reactions, and open DMs.
 - Bounded triage and explicit mark-read actions.
 
-Slack's native unread fields are not available for every conversation type. Missing state is **unknown**, never zero. Triage reports scan coverage, continuation cursors, and per-conversation errors. Reading messages, searching, or replying never marks anything read automatically. Mark-unread and per-thread read markers are unsupported. Files, huddles, administrative APIs, and incoming events are outside this version.
+Slack's native unread fields are not available for every conversation type. Missing state is **unknown**, never zero. Triage reports scan coverage, continuation cursors, and per-conversation errors. Reading messages, searching, or replying never marks anything read automatically. Mark-unread and per-thread read markers are unsupported. Files, huddles and administrative APIs are outside this version. Optional incoming Socket Mode events require explicit app setup; see the common Messaging guide.
 
 Writes require stable idempotency keys. Repeating an accepted operation returns its saved receipt; changing its content with the same key is rejected. An uncertain result blocks automatic resending. See [operation and recovery details](plugins/slack/docs/operations.md).
 
@@ -31,8 +31,8 @@ Writes require stable idempotency keys. Repeating an accepted operation returns 
 Alongside the existing API, the plugin implements the optional provider-independent
 Messaging v1 contract in [Switchboard #40](https://github.com/tader/switchboard/pull/40).
 See [contract coverage and limitations](plugins/slack/docs/messaging-contract.md).
-The core feature remains disabled by default. Native Slack push is not configured
-by this change; the contract advertises bounded reconciliation instead.
+The core feature remains disabled by default. Socket Mode push requires explicit
+Slack app/token setup; bounded reconciliation remains available without it.
 
 ## Development
 
@@ -42,6 +42,7 @@ npm run check
 npm test
 SWITCHBOARD_ROOT=/path/to/switchboard npm run integration
 SWITCHBOARD_ROOT=/path/to/staged-contract-core npm run integration:contracts
+SWITCHBOARD_ROOT=/path/to/staged-contract-core npm run integration:native
 ```
 
 The integration test uses the actual Switchboard installer, plugin manager, OAuth helper, proxy and API parser with temporary state and fixture providers. It verifies OAuth refresh persistence, encrypted web-session source selection, source removal and restart without accessing a live workspace. Desktop import was additionally validated against a signed-in macOS Slack session using only identity metadata; browser sign-in has fixture coverage. CI uses Node 24 and a pinned Switchboard core revision.
@@ -50,4 +51,4 @@ For opt-in identity-only validation, configure `SWITCHBOARD_URL`, `SWITCHBOARD_T
 
 ## Releases
 
-The release workflow validates reviewed changes on `main` and publishes a GitHub release when the package version has no release yet. Bump `package.json`, `package-lock.json` and both plugin manifests together in a PR for later releases. It uses only repository Contents write permission and does not create or approve PRs. The catalog PR must wait for the first stable release. Each plugin folder is independently installable; repository-root development files are not runtime requirements.
+The release workflow validates reviewed changes on `main` and publishes a GitHub release when the package version has no release yet. Release Please creates reviewed version/changelog PRs and updates the root package/lock and both plugin manifests together. Its verified-head dispatcher runs required CI on bot PRs; the publisher only tags versions after they reach `main` through normal review and checks. The catalog PR must wait for the first stable release. Each plugin folder is independently installable; repository-root development files are not runtime requirements.
