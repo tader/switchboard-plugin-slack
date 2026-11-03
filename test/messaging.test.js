@@ -1,3 +1,5 @@
+import { SlackService } from "../plugins/slack/lib/service.js";
+import { operations as legacyOperations } from "../plugins/slack/lib/operations.js";
 import { MessagingCursors } from "../plugins/slack/lib/messaging-cursors.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -387,5 +389,35 @@ test("write-only bindings can send while unsupported reply targets and per-resou
   await assert.rejects(
     invoke(f, "messaging.messages.list", { conversationId: channelId }),
     (e) => e.code === "permission_denied" && e.status === 403,
+  );
+});
+
+test("legacy accepted send keys retain their fingerprint through the new optional literal-text field", async (t) => {
+  const f = await contractsFixture(t),
+    legacy = new SlackService(f.client, f.dir);
+  const input = {
+    channel: channelId,
+    text: "Existing accepted message",
+    idempotencyKey: "legacy-existing-key",
+  };
+  const prior = await legacy.invoke(
+    legacyOperations.find((op) => op.id === "postSlackMessage"),
+    input,
+    f.connection,
+  );
+  assert.equal(prior.ok, true);
+  const replay = await f
+    .invocation()
+    .request({
+      method: "POST",
+      url: "/messages",
+      headers: [["content-type", "application/json"]],
+      body: JSON.stringify(input),
+    });
+  assert.equal(replay.status, 200);
+  assert.equal((await replay.json()).replayed, true);
+  assert.equal(
+    f.calls.filter((c) => c.method === "chat.postMessage").length,
+    1,
   );
 });

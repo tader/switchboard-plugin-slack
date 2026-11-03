@@ -29,7 +29,7 @@ const message = {
   channel,
   text,
   threadTs: ts,
-  plainText: { type: "boolean", default: false },
+  plainText: { type: "boolean" },
   idempotencyKey: key,
 };
 const mutation = {
