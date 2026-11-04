@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.1.0...v1.2.0) (2026-11-04)
+
+
+### Features
+
+* receive native Slack web-session messaging events ([#4](https://github.com/tader/switchboard-plugin-slack/issues/4)) ([e224f36](https://github.com/tader/switchboard-plugin-slack/commit/e224f36e3ef55e89938fcda9a1f0adc8e338e57f))
+
 ## [1.1.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.0.0...v1.1.0) (2026-11-04)
 
 
