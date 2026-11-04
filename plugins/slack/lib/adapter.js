@@ -1,3 +1,5 @@
+import { SocketMode } from "./socket-mode.js";
+import { createMessaging } from "./messaging.js";
 import http from "node:http";
 import { randomBytes } from "node:crypto";
 import { SlackClient } from "./client.js";
@@ -6,7 +8,11 @@ import { createAuth } from "./auth.js";
 import { operations, openapi } from "./operations.js";
 import { fail, publicError } from "./errors.js";
 import { validate } from "./validate.js";
-export async function createAdapter(ctx, { client = new SlackClient() } = {}) {
+export async function createAdapter(
+  ctx,
+  { client = new SlackClient(), socketOptions } = {},
+) {
+  const socketMode = new SocketMode(ctx.settings, socketOptions);
   const auth = createAuth(ctx, client),
     service = new SlackService(client, ctx.dataDir),
     invocations = new Map();
@@ -120,6 +126,12 @@ export async function createAdapter(ctx, { client = new SlackClient() } = {}) {
         baseUrl: "http://slack.localhost",
         allowedHosts: ["slack.localhost", origin.host],
         openapi,
+        contracts: createMessaging(
+          ctx.dataDir,
+          socketMode.configured()
+            ? socketMode.watch.bind(socketMode)
+            : undefined,
+        ),
         authMethods: auth.methods.map((method) => ({
           ...method,
           async authorize(req, conn, opts = {}) {
@@ -157,6 +169,7 @@ export async function createAdapter(ctx, { client = new SlackClient() } = {}) {
     ],
     async dispose() {
       closed = true;
+      await socketMode.dispose();
       clearInterval(timer);
       invocations.clear();
       await new Promise((resolve) => {

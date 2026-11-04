@@ -104,6 +104,9 @@ export class SlackService {
         "channels",
       );
     }
+    if (op.id === "getSlackConversation")
+      return (await call("conversations.info", { channel: input.channel }))
+        .channel;
     if (op.id === "listSlackMessages")
       return page(await call("conversations.history", input), "messages");
     if (op.id === "getSlackThread")
@@ -220,6 +223,22 @@ export class SlackService {
       }
       throw fail("message_not_found", 404);
     };
+    if (op.id === "getSlackMessage") {
+      const data = await call(
+        input.threadTs ? "conversations.replies" : "conversations.history",
+        {
+          channel: input.channel,
+          ...(input.threadTs ? { ts: input.threadTs } : {}),
+          oldest: input.ts,
+          latest: input.ts,
+          inclusive: true,
+          limit: 1,
+        },
+      );
+      const message = data.messages?.find((m) => m.ts === input.ts);
+      if (!message) throw fail("message_not_found", 404);
+      return message;
+    }
     if (op.id === "getSlackReplyContexts")
       return {
         items: await Promise.all(
@@ -326,9 +345,15 @@ export class SlackService {
           case "postSlackMessage":
             data = await call("chat.postMessage", {
               channel: input.channel,
-              text: input.text,
+              text: input.plainText
+                ? input.text
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                : input.text,
+              ...(input.plainText ? { parse: "none" } : {}),
               thread_ts: input.threadTs,
-              mrkdwn: true,
+              mrkdwn: !input.plainText,
               unfurl_links: false,
               unfurl_media: false,
             });
