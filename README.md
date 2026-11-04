@@ -22,7 +22,7 @@ The plugin exposes 21 documented operations in Switchboard's Console and MCP dis
 - Send messages, edit/delete your own messages, add/remove reactions, and open DMs.
 - Bounded triage and explicit mark-read actions.
 
-Slack's native unread fields are not available for every conversation type. Missing state is **unknown**, never zero. Triage reports scan coverage, continuation cursors, and per-conversation errors. Reading messages, searching, or replying never marks anything read automatically. Mark-unread and per-thread read markers are unsupported. Files, huddles and administrative APIs are outside this version. Optional incoming Socket Mode events require explicit app setup; see the common Messaging guide.
+Slack's native unread fields are not available for every conversation type. Missing state is **unknown**, never zero. Triage reports scan coverage, continuation cursors, and per-conversation errors. Reading messages, searching, or replying never marks anything read automatically. Mark-unread and per-thread read markers are unsupported. Files, huddles and administrative APIs are outside this version. Desktop/web sessions receive native RTM invalidations without creating an app. OAuth connections can use explicitly configured Socket Mode; see the common Messaging guide.
 
 Writes require stable idempotency keys. Repeating an accepted operation returns its saved receipt; changing its content with the same key is rejected. An uncertain result blocks automatic resending. See [operation and recovery details](plugins/slack/docs/operations.md).
 
@@ -31,7 +31,7 @@ Writes require stable idempotency keys. Repeating an accepted operation returns 
 Alongside the existing API, the plugin implements the optional provider-independent
 Messaging v1 contract in [Switchboard #40](https://github.com/tader/switchboard/pull/40).
 See [contract coverage and limitations](plugins/slack/docs/messaging-contract.md).
-The core feature remains disabled by default. Socket Mode push requires explicit
+The core feature remains disabled by default. Desktop/web session push uses the imported session automatically; Socket Mode for OAuth requires explicit
 Slack app/token setup; bounded reconciliation remains available without it.
 
 ## Development

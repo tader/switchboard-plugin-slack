@@ -124,3 +124,25 @@ terminal authentication stop. Fixture success does not prove live app configurat
 Sources: [Socket Mode lifecycle and acknowledgement](https://docs.slack.dev/apis/events-api/using-socket-mode/),
 [Events API visibility](https://docs.slack.dev/apis/events-api/),
 [installation authorization lookup](https://docs.slack.dev/reference/methods/apps.event.authorizations.list/).
+
+## Native desktop/web-session delivery
+
+Web-session connections now receive RTM invalidations using the same imported
+`xoxc` token, `d` cookie and user agent as normal reads. No app installation,
+Socket Mode toggle or app-level token is needed. The authenticated `rtm.connect`
+response must match both the connection's workspace and user. Cookies go only
+to the validated Slack websocket endpoint; ticket URLs and message bodies are
+never published in the event stream.
+
+The receive socket lives only while the core holds a watch lease. Abort,
+plugin disposal, revoked access, invalid sessions and account mismatches close
+it. A bounded queue, hello timeout and ping watchdog detect stalled receivers.
+A new connection emits `resync.required`; disconnection is not represented as
+continuous coverage. The core manages retry, backoff and lease expiry. This
+web-session protocol is not a promised public Slack API, so reconciliation
+remains necessary after interruptions or provider changes.
+
+When explicit Socket Mode app settings are configured, that transport retains
+priority. OAuth-only connections without those settings do not claim native
+push support. Existing operations, access scopes and read-only restrictions
+remain in force.

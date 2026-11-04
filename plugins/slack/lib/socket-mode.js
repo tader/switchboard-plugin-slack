@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { fail } from "./errors.js";
 const ENDPOINT = "https://slack.com/api/";
-const MESSAGE_EVENTS = new Set([
+export const MESSAGE_EVENTS = new Set([
   "message",
   "reaction_added",
   "reaction_removed",
