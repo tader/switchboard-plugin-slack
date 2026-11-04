@@ -32,11 +32,11 @@ async function invoke(f, name, input, context = f.invocation()) {
   assert.ok(valid(result), JSON.stringify(valid.errors));
   return result;
 }
-test("Messaging discovery respects granted scopes, read-only and native sessions without inventing push", async (t) => {
+test("Messaging discovery respects granted scopes, read-only and native session watch support", async (t) => {
   const f = await contractsFixture(t),
     contract = f.service.contracts;
   assert.equal(contract.version, 1);
-  assert.equal(contract.watch, undefined);
+  assert.equal(typeof contract.watch, "function");
   assert.deepEqual(
     contract.available(f.connection).sort(),
     Object.keys(contract.operations).sort(),

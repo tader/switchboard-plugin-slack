@@ -1,3 +1,4 @@
+import { WebSessionWatch } from "./web-session-watch.js";
 import { SocketMode } from "./socket-mode.js";
 import { createMessaging } from "./messaging.js";
 import http from "node:http";
@@ -10,9 +11,10 @@ import { fail, publicError } from "./errors.js";
 import { validate } from "./validate.js";
 export async function createAdapter(
   ctx,
-  { client = new SlackClient(), socketOptions } = {},
+  { client = new SlackClient(), socketOptions, webSocketOptions } = {},
 ) {
   const socketMode = new SocketMode(ctx.settings, socketOptions);
+  const webSession = new WebSessionWatch(client, webSocketOptions);
   const auth = createAuth(ctx, client),
     service = new SlackService(client, ctx.dataDir),
     invocations = new Map();
@@ -128,9 +130,11 @@ export async function createAdapter(
         openapi,
         contracts: createMessaging(
           ctx.dataDir,
-          socketMode.configured()
-            ? socketMode.watch.bind(socketMode)
-            : undefined,
+          (input, watchCtx) => socketMode.configured()
+            ? socketMode.watch(input, watchCtx)
+            : watchCtx.connection.credentials?.kind === "web"
+              ? webSession.watch(input, watchCtx)
+              : socketMode.watch(input, watchCtx),
         ),
         authMethods: auth.methods.map((method) => ({
           ...method,
@@ -169,6 +173,7 @@ export async function createAdapter(
     ],
     async dispose() {
       closed = true;
+      await webSession.dispose();
       await socketMode.dispose();
       clearInterval(timer);
       invocations.clear();

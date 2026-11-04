@@ -1,6 +1,7 @@
 import { fail } from "./errors.js";
 export const METHODS = new Set([
   "auth.test",
+  "rtm.connect",
   "users.info",
   "users.list",
   "users.conversations",
@@ -21,6 +22,7 @@ export const METHODS = new Set([
 // Keep JSON for mutations, and put read parameters in a form body (never the URL).
 const FORM_METHODS = new Set([
   "auth.test",
+  "rtm.connect",
   "users.info",
   "users.list",
   "users.conversations",

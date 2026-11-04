@@ -98,7 +98,7 @@ try {
   const descriptor = await (
     await http(`/connections/${id}/contracts/v1`)
   ).json();
-  assert.deepEqual(descriptor.changes, { native: false, reconciliation: true });
+  assert.deepEqual(descriptor.changes, { native: true, reconciliation: true });
   assert.equal(descriptor.operations.length, 5);
   assert.equal(
     descriptor.operations.find((o) => o.name === "messaging.messages.send")
