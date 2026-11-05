@@ -1,7 +1,7 @@
 {
   "id": "slack",
   "name": "Slack",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Slack web sessions or official user OAuth, conversations, search, messaging and explicit unread triage.",
   "dependencies": [
     "oauth2",

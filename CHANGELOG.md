@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/tader/switchboard-plugin-slack/compare/v1.2.0...v1.2.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* resolve sender names and direct message titles ([998fc47](https://github.com/tader/switchboard-plugin-slack/commit/998fc47682ef438feac51b7fc2436de0b397aff3))
+* show sender names and readable direct message titles ([8e88561](https://github.com/tader/switchboard-plugin-slack/commit/8e885610433d60ae094aca7efe0cb9dbcea41702))
+
 ## [1.2.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.1.0...v1.2.0) (2026-11-04)
 
 
