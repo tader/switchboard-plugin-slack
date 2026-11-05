@@ -21,6 +21,7 @@ export async function contractsFixture(
         const result = await custom(method, args);
         if (result !== undefined) return result;
       }
+      if (method === "users.info") return {user:{id:args.user, profile:{display_name:"Fixture name"}}};
       if (method === "auth.test")
         return { team_id: c.teamId, user_id: c.userId };
       if (method === "users.conversations")
