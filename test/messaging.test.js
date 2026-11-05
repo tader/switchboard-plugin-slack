@@ -190,7 +190,7 @@ test("exact reads and threaded sends use opaque stable targets and bounded nativ
   assert.equal(get.id, receipt.resourceId);
   assert.equal(get.threadId, rootId);
   assert.equal(get.replyToId, rootId);
-  const native = f.calls.at(-1);
+  const native = f.calls.findLast(c => c.method === "conversations.replies");
   assert.equal(native.method, "conversations.replies");
   assert.equal(native.args.oldest, replyId);
   assert.equal(native.args.latest, replyId);
@@ -315,9 +315,10 @@ test("thread history uses the common filter, binds pagination and exposes root d
     threadId: rootId,
   });
   assert.equal(page.items[0].replyToId, rootId);
+  assert.equal(page.items[0].authorDisplayName, "Fixture name");
   assert.equal(page.coverage.complete, false);
-  assert.equal(f.calls.at(-1).args.ts, rootId);
-  assert.equal(f.calls.at(-1).args.limit, 15);
+  assert.equal(f.calls.findLast(c => c.method === "conversations.replies").args.ts, rootId);
+  assert.equal(f.calls.findLast(c => c.method === "conversations.replies").args.limit, 15);
   await invoke(f, "messaging.messages.list", {
     conversationId: channelId,
     threadId: rootId,
