@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { messagingOperations } from "./messaging-schema.js";
 import { MessagingCursors } from "./messaging-cursors.js";
+import { DisplayNames, label } from "./display-names.js";
 import { fail } from "./errors.js";
 const CHANNEL = /^[CDG][A-Z0-9]{7,}$/;
 const TS = /^\d{1,16}\.\d{6}$/;
@@ -110,6 +111,20 @@ export function projectMessage(m, conversationId, userId) {
 }
 export function createMessaging(root, nativeWatch) {
   const cursors = new MessagingCursors(root);
+  const names = new DisplayNames();
+  const userName = (ctx, id) => names.resolve(ctx, id, user => request(ctx, "/users/info", { user }));
+  async function namedConversation(ctx, raw) {
+    const result = projectConversation(raw);
+    if (raw.is_im && raw.user) result.title = await userName(ctx, raw.user) || result.title;
+    return result;
+  }
+  async function namedMessage(ctx, raw, conversationId) {
+    const result = projectMessage(raw, conversationId, ctx.connection.credentials.userId);
+    result.authorDisplayName = raw.bot_id
+      ? label(raw.bot_profile?.name) || label(raw.username)
+      : await userName(ctx, result.authorId);
+    return result;
+  }
   async function request(ctx, path, input = {}, method = "GET") {
     const query = new URLSearchParams(
       Object.entries(input)
@@ -169,7 +184,7 @@ export function createMessaging(root, nativeWatch) {
           method === "GET" ? "source_unavailable" : "uncertain",
           method === "GET" ? 502 : 409,
         );
-      const code = ["channel_not_found", "message_not_found"].includes(e.code)
+      const code = ["channel_not_found", "message_not_found", "user_not_found", "users_not_found"].includes(e.code)
         ? "not_found"
         : e.code === "idempotency_conflict"
           ? "idempotency_conflict"
@@ -268,7 +283,7 @@ export function createMessaging(root, nativeWatch) {
     );
     const complete = !next && !data.hasMore && types.split(",").length === 4;
     return {
-      items: data.items.map(projectConversation),
+      items: await Promise.all(data.items.map(c => namedConversation(ctx, c))),
       ...(next ? { nextCursor: next } : {}),
       coverage: {
         complete,
@@ -284,7 +299,7 @@ export function createMessaging(root, nativeWatch) {
     };
   });
   operation("messaging.conversations.get", async (input, ctx) =>
-    projectConversation(await conversation(ctx, input.id)),
+    namedConversation(ctx, await conversation(ctx, input.id)),
   );
   operation(
     "messaging.messages.list",
@@ -302,13 +317,7 @@ export function createMessaging(root, nativeWatch) {
       );
       // Slack retention and thread replies are not a complete conversation snapshot.
       return {
-        items: data.items.map((m) =>
-          projectMessage(
-            m,
-            input.conversationId,
-            ctx.connection.credentials.userId,
-          ),
-        ),
+        items: await Promise.all(data.items.map(m => namedMessage(ctx, m, input.conversationId))),
         ...(next ? { nextCursor: next } : {}),
         coverage: {
           complete: false,
@@ -337,11 +346,7 @@ export function createMessaging(root, nativeWatch) {
       channel: channel(input.conversationId),
       ...target(input.id),
     });
-    return projectMessage(
-      data,
-      input.conversationId,
-      ctx.connection.credentials.userId,
-    );
+    return namedMessage(ctx, data, input.conversationId);
   });
   const sendSchema = messagingOperations["messaging.messages.send"].inputSchema;
   operation(
