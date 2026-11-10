@@ -68,7 +68,7 @@ test("Messaging discovery respects granted scopes, read-only and native session 
     ...f.connection,
     credentials: { ...f.connection.credentials, kind: "web", scope: "" },
   };
-  assert.equal(contract.available(web).length, 5);
+  assert.equal(contract.available(web).length, 6);
   await assert.rejects(
     invoke(
       f,
@@ -421,4 +421,21 @@ test("legacy accepted send keys retain their fingerprint through the new optiona
     f.calls.filter((c) => c.method === "chat.postMessage").length,
     1,
   );
+});
+
+test("common reactions map emoji, preserve counts and replay safely", async (t) => {
+ const f=await contractsFixture(t);f.respond(async method => method.startsWith("reactions.") ? {ok:true} : undefined);
+ const projected=projectMessage({ts:rootId,text:"Hi",user:ownId,reactions:[{name:"+1",count:2,users:[ownId]},{name:"custom",count:1,users:[]}]},channelId,ownId);
+ assert.deepEqual(projected.reactions,[{emoji:"👍",count:2,me:true},{emoji:":custom:",count:1,me:null}]);
+ const input={conversationId:channelId,messageId:rootId,emoji:"👍",remove:false};
+ const result=await invoke(f,"messaging.reactions.update",input,f.invocation(f.connection,"reaction-op"));
+ assert.equal(result.status,"accepted");
+ assert.equal(f.calls.at(-1).method,"reactions.add");
+ assert.equal(f.calls.at(-1).args.name,"+1");
+});
+
+test("an empty authorized reaction snapshot clears old reactions",()=>{
+ const row={ts:rootId,text:"Hi",user:ownId};
+ assert.deepEqual(projectMessage(row,channelId,ownId,true).reactions,[]);
+ assert.equal(projectMessage(row,channelId,ownId,false).reactions,undefined);
 });
