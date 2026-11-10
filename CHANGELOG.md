@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/tader/switchboard-plugin-slack/compare/v1.3.0...v1.3.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* document reaction user coverage ([e4ee909](https://github.com/tader/switchboard-plugin-slack/commit/e4ee909b1d94c013480e28ae3430125d4cf1f02e))
+
 ## [1.3.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.2.1...v1.3.0) (2026-11-10)
 
 
