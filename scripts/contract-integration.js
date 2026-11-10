@@ -166,6 +166,7 @@ try {
               hidden: true,
               user: ownId,
             },
+            {ts:"1700000003.000001",text:"Public",user:ownId,reactions:[{name:"+1",count:2,users:[ownId]}]},
           ],
           response_metadata: { next_cursor: "retained-next" },
         }
@@ -177,6 +178,8 @@ try {
   assert.equal(page.coverage.complete, false);
   assert.equal(page.items[0].text, null);
   assert.equal(page.items[0].contentState, "restricted");
+  assert.deepEqual(page.items[1].reactions[0].users,[{id:ownId,displayName:"Fixture name"}]);
+  assert.equal(page.items[1].reactions[0].usersComplete,false);
   assert.equal(
     (
       await call("messaging.messages.list", {
