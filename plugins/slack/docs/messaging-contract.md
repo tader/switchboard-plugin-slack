@@ -16,6 +16,7 @@ Implemented common operations:
 - `messaging.conversations.list` and `.get`.
 - `messaging.messages.list` and `.get`.
 - `messaging.messages.send`, including replies into existing threads.
+- `messaging.reactions.update`, when reaction write access is granted.
 
 Discovery uses actual granted OAuth read/history/write scopes, the configured
 read-only boundary, or the native permission checks of an explicitly selected web
@@ -41,7 +42,7 @@ and [thread pagination](https://docs.slack.dev/reference/methods/conversations.r
 
 Hidden/restricted/deleted content has null text. Missing bodies, unread counts,
 activity timestamps and sender ownership remain explicitly unknown. File contents,
-attachments and reactions are not expanded. The text fallback decodes Slack's three
+attachments are not expanded. Authorized reaction snapshots include available counts and own state; incomplete user lists leave own state unknown. Standard emoji map to Slack names, and custom emoji use `:name:`. The text fallback decodes Slack's three
 escaped control characters; Slack mention/link ids or formatting in existing text
 are not resolved into rich objects. Timestamps preserve millisecond precision.
 

@@ -3,6 +3,8 @@ import { messagingOperations } from "./messaging-schema.js";
 import { MessagingCursors } from "./messaging-cursors.js";
 import { DisplayNames, label } from "./display-names.js";
 import { fail } from "./errors.js";
+const REACTIONS = {"👍":"+1","❤️":"heart","😂":"joy","😮":"open_mouth","😢":"cry","🙏":"pray"};
+const REACTION_EMOJI = Object.fromEntries(Object.entries(REACTIONS).map(([emoji,name]) => [name,emoji]));
 const CHANNEL = /^[CDG][A-Z0-9]{7,}$/;
 const TS = /^\d{1,16}\.\d{6}$/;
 const kinds = [
@@ -63,7 +65,7 @@ export function projectConversation(c) {
     updatedAt: time(c.latest?.ts),
   };
 }
-export function projectMessage(m, conversationId, userId) {
+export function projectMessage(m, conversationId, userId, reactionRead = false) {
   if (!m || !TS.test(m.ts)) throw fail("invalid_response", 502);
   const deleted = m.subtype === "message_deleted" || m.subtype === "tombstone";
   const restricted = m.hidden === true || !!m.is_hidden_by_limit;
@@ -92,6 +94,7 @@ export function projectMessage(m, conversationId, userId) {
           : null,
     createdAt: time(m.ts),
     isOwn: m.user ? m.user === userId && !m.bot_id : m.bot_id ? false : null,
+    ...(Array.isArray(m.reactions) || reactionRead ? { reactions: (m.reactions ?? []).filter(r => typeof r.name === "string").map(r => ({ emoji: REACTION_EMOJI[r.name] ?? `:${r.name}:`, count: Number.isSafeInteger(r.count) && r.count >= 0 ? r.count : null, me: Array.isArray(r.users) && userId ? (r.users.includes(userId) ? true : Number.isSafeInteger(r.count) && r.users.length >= r.count ? false : null) : null })) } : {}),
     contentState: state,
     contentType:
       m.files?.length || m.attachments?.length
@@ -119,7 +122,7 @@ export function createMessaging(root, nativeWatch) {
     return result;
   }
   async function namedMessage(ctx, raw, conversationId) {
-    const result = projectMessage(raw, conversationId, ctx.connection.credentials.userId);
+    const result = projectMessage(raw, conversationId, ctx.connection.credentials.userId, permissions(ctx.connection)("reactions:read"));
     result.authorDisplayName = raw.bot_id
       ? label(raw.bot_profile?.name) || label(raw.username)
       : await userName(ctx, result.authorId);
@@ -212,6 +215,7 @@ export function createMessaging(root, nativeWatch) {
       names.push("messaging.messages.list", "messaging.messages.get");
     if (c.config.access === "write" && has("chat:write"))
       names.push("messaging.messages.send");
+    if (c.config.access === "write" && has("reactions:write")) names.push("messaging.reactions.update");
     return names;
   }
   const operations = {};
@@ -418,6 +422,22 @@ export function createMessaging(root, nativeWatch) {
       },
     },
   );
+  operation("messaging.reactions.update", async (input, ctx) => {
+    channel(input.conversationId);
+    const { ts } = target(input.messageId);
+    const name = REACTIONS[input.emoji] ?? (/^:[a-z0-9_+-]{1,62}:$/.test(input.emoji) ? input.emoji.slice(1,-1) : null);
+    if (!name) return { status: "rejected", code: "invalid_request" };
+    if (typeof ctx.idempotencyKey !== "string" || !ctx.idempotencyKey) throw fail("invalid_idempotency_key");
+    const idempotencyKey = "contract:" + createHash("sha256").update(JSON.stringify([ctx.connection.id, ctx.idempotencyKey])).digest("hex");
+    try {
+      await request(ctx, "/reactions", { channel: input.conversationId, ts, name, idempotencyKey }, input.remove ? "DELETE" : "POST");
+      return { status: "accepted" };
+    } catch(e) {
+      if (e.code === "uncertain") return { status: "uncertain" };
+      if (["authentication_required", "idempotency_conflict", "invalid_cursor", "rate_limited"].includes(e.code)) throw e;
+      return { status: "rejected", code: e.code };
+    }
+  });
   return {
     version: 1,
     ...(nativeWatch

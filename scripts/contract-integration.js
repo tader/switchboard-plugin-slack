@@ -99,7 +99,7 @@ try {
     await http(`/connections/${id}/contracts/v1`)
   ).json();
   assert.deepEqual(descriptor.changes, { native: true, reconciliation: true });
-  assert.equal(descriptor.operations.length, 5);
+  assert.equal(descriptor.operations.length, 6);
   assert.equal(
     descriptor.operations.find((o) => o.name === "messaging.messages.send")
       .inputConstraints.properties.text.maxLength,
@@ -152,6 +152,10 @@ try {
     ).status,
     400,
   );
+  f.respond(async method => method.startsWith("reactions.") ? {ok:true} : undefined);
+  const reaction={conversationId:channelId,messageId:rootId,emoji:"👍",remove:false};
+  for(let n=0;n<2;n++){const response=await call("messaging.reactions.update",reaction,"reaction-contract");assert.equal(response.status,200);assert.equal((await response.json()).status,"accepted");}
+  assert.equal(f.calls.filter(x=>x.method==="reactions.add").length,1);
   f.respond(async (method) =>
     method === "conversations.history"
       ? {
