@@ -147,3 +147,8 @@ When explicit Socket Mode app settings are configured, that transport retains
 priority. OAuth-only connections without those settings do not claim native
 push support. Existing operations, access scopes and read-only restrictions
 remain in force.
+
+Reaction user lists contain the identities Slack returned and account-scoped
+display names when resolvable. The list can be shorter than the reaction count;
+`usersComplete` is false in that case. Name resolution is bounded per page and
+never changes the message or reaction identity.
