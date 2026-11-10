@@ -94,7 +94,12 @@ export function projectMessage(m, conversationId, userId, reactionRead = false) 
           : null,
     createdAt: time(m.ts),
     isOwn: m.user ? m.user === userId && !m.bot_id : m.bot_id ? false : null,
-    ...(Array.isArray(m.reactions) || reactionRead ? { reactions: (m.reactions ?? []).filter(r => typeof r.name === "string").map(r => ({ emoji: REACTION_EMOJI[r.name] ?? `:${r.name}:`, count: Number.isSafeInteger(r.count) && r.count >= 0 ? r.count : null, me: Array.isArray(r.users) && userId ? (r.users.includes(userId) ? true : Number.isSafeInteger(r.count) && r.users.length >= r.count ? false : null) : null })) } : {}),
+    ...(Array.isArray(m.reactions) || reactionRead ? { reactions: (m.reactions ?? []).filter(r => typeof r.name === "string").map(r => {
+      const ids = Array.isArray(r.users) ? [...new Set(r.users.filter(id => typeof id === "string" && /^[UW][A-Z0-9]{7,}$/.test(id)))] : null;
+      const count = Number.isSafeInteger(r.count) && r.count >= 0 ? r.count : null;
+      return { emoji: REACTION_EMOJI[r.name] ?? `:${r.name}:`, count, me: ids && userId ? (ids.includes(userId) ? true : count !== null && ids.length === count ? false : null) : null,
+        ...(ids ? {users:ids.slice(0,100).map(id => ({id,displayName:null})),usersComplete:count !== null && count === ids.length && ids.length === r.users.length && ids.length <= 100} : {}) };
+    }) } : {}),
     contentState: state,
     contentType:
       m.files?.length || m.attachments?.length
@@ -121,11 +126,17 @@ export function createMessaging(root, nativeWatch) {
     if (raw.is_im && raw.user) result.title = await userName(ctx, raw.user) || result.title;
     return result;
   }
-  async function namedMessage(ctx, raw, conversationId) {
+  async function namedMessage(ctx, raw, conversationId, reactionNames = new Set()) {
     const result = projectMessage(raw, conversationId, ctx.connection.credentials.userId, permissions(ctx.connection)("reactions:read"));
     result.authorDisplayName = raw.bot_id
       ? label(raw.bot_profile?.name) || label(raw.username)
       : await userName(ctx, result.authorId);
+    await Promise.all((result.reactions ?? []).flatMap(reaction => (reaction.users ?? []).map(async user => {
+      if (!reactionNames.has(user.id) && reactionNames.size >= 40) return;
+      reactionNames.add(user.id);
+      try { user.displayName = await userName(ctx, user.id); }
+      catch (error) { ctx.signal?.throwIfAborted(); }
+    })));
     return result;
   }
   async function request(ctx, path, input = {}, method = "GET") {
@@ -320,8 +331,9 @@ export function createMessaging(root, nativeWatch) {
         "messages",
       );
       // Slack retention and thread replies are not a complete conversation snapshot.
+      const reactionNames = new Set();
       return {
-        items: await Promise.all(data.items.map(m => namedMessage(ctx, m, input.conversationId))),
+        items: await Promise.all(data.items.map(m => namedMessage(ctx, m, input.conversationId, reactionNames))),
         ...(next ? { nextCursor: next } : {}),
         coverage: {
           complete: false,

@@ -426,12 +426,20 @@ test("legacy accepted send keys retain their fingerprint through the new optiona
 test("common reactions map emoji, preserve counts and replay safely", async (t) => {
  const f=await contractsFixture(t);f.respond(async method => method.startsWith("reactions.") ? {ok:true} : undefined);
  const projected=projectMessage({ts:rootId,text:"Hi",user:ownId,reactions:[{name:"+1",count:2,users:[ownId]},{name:"custom",count:1,users:[]}]},channelId,ownId);
- assert.deepEqual(projected.reactions,[{emoji:"👍",count:2,me:true},{emoji:":custom:",count:1,me:null}]);
+ assert.deepEqual(projected.reactions,[{emoji:"👍",count:2,me:true,users:[{id:ownId,displayName:null}],usersComplete:false},{emoji:":custom:",count:1,me:null,users:[],usersComplete:false}]);
  const input={conversationId:channelId,messageId:rootId,emoji:"👍",remove:false};
  const result=await invoke(f,"messaging.reactions.update",input,f.invocation(f.connection,"reaction-op"));
  assert.equal(result.status,"accepted");
  assert.equal(f.calls.at(-1).method,"reactions.add");
  assert.equal(f.calls.at(-1).args.name,"+1");
+});
+
+test("message reads resolve observed reaction users and report partial coverage", async t => {
+ const f=await contractsFixture(t);
+ f.respond(async method => method === "conversations.history" ? {messages:[{ts:rootId,text:"Hi",user:ownId,reactions:[{name:"+1",count:2,users:[ownId]}]}]} : undefined);
+ const page=await invoke(f,"messaging.messages.list",{conversationId:channelId});
+ assert.deepEqual(page.items[0].reactions,[{emoji:"👍",count:2,me:true,users:[{id:ownId,displayName:"Fixture name"}],usersComplete:false}]);
+ assert.equal(f.calls.filter(call=>call.method==="users.info"&&call.args.user===ownId).length,1);
 });
 
 test("an empty authorized reaction snapshot clears old reactions",()=>{
