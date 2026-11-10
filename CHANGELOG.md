@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.2.1...v1.3.0) (2026-11-10)
+
+
+### Features
+
+* support shared chat reactions ([#9](https://github.com/tader/switchboard-plugin-slack/issues/9)) ([b10cb56](https://github.com/tader/switchboard-plugin-slack/commit/b10cb567a8654175620715b55c83a142f24688cb))
+
 ## [1.2.1](https://github.com/tader/switchboard-plugin-slack/compare/v1.2.0...v1.2.1) (2026-11-05)
 
 
