@@ -4,11 +4,10 @@ services: [slack]
 order: 3
 ---
 
-# Shared Messaging v1 (staged)
+# Shared Messaging v1
 
 This is the optional generic contract beside the existing Slack operations. It
-requires the staged core from [Switchboard #40](https://github.com/tader/switchboard/pull/40)
-and `SWITCHBOARD_SHARED_CONTRACTS=1`. It does not change authentication configuration,
+requires shared contracts to be enabled on Switchboard (`SWITCHBOARD_SHARED_CONTRACTS=1`). It does not change authentication configuration,
 request broader scopes, configure cloud subscriptions or enable the core feature.
 
 Implemented common operations:
@@ -62,16 +61,10 @@ history through common operations. The optional Socket Mode hook below requires
 explicit provider setup. Local SSE and peer relay alone do not make polling native
 Slack push.
 
-Common conversation creation, edit/delete, reactions, read-state mutations and
+Common conversation creation, edit/delete, read-state mutations and
 thread enumeration are not advertised yet. Existing Slack-specific operations stay
 available with their existing preconditions and semantics. Capabilities must not be
 inferred from those legacy endpoints.
-
-The tests use an offline Slack fixture behind the real adapter and core proxy,
-HTTP/SSE routes. They check the canonical schema, target/thread mapping, scope and
-read-only enforcement, signed cursors, restricted content, durable writes, replay,
-uncertain outcomes, metadata publication and terminal authentication pause. No live
-workspace messages are sent.
 
 ## Optional native Socket Mode
 
@@ -116,11 +109,6 @@ native and fallback work until credentials change. Native app errors stay separa
 Input frames (1 MiB), queued metadata (256), and authorization traversal (20 pages)
 are bounded; overflow or incomplete routing closes receive work without ACK and
 requires a new resync. No message sends or read markers occur in the receive loop.
-
-`npm run integration:native` uses offline Slack/socket fixtures with the real core
-HTTP/SSE, durable checkpoint/event database and activity/auth runtime. It covers
-post-commit ACK, replay/deduplication, metadata-only storage, expired activity and
-terminal authentication stop. Fixture success does not prove live app configuration.
 
 Sources: [Socket Mode lifecycle and acknowledgement](https://docs.slack.dev/apis/events-api/using-socket-mode/),
 [Events API visibility](https://docs.slack.dev/apis/events-api/),
