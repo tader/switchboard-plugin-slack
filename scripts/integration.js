@@ -17,6 +17,11 @@ process.env.SWITCHBOARD_DATA_DIR = path.join(dir, "data");
 process.env.SWITCHBOARD_WATCH_PLUGINS = "false";
 process.env.SWITCHBOARD_PUBLIC_URL = "http://localhost:8770";
 process.env.SWITCHBOARD_BUILTIN_PLUGINS_DIR = path.join(core, "plugins");
+const previewRoot = path.join(dir, "outputs");
+process.env.SWITCHBOARD_ACTIVITY_PREVIEW_ROOT = previewRoot;
+process.env.SWITCHBOARD_ACTIVITY_PREVIEW_RESTORE_SAFE = "1";
+process.env.SWITCHBOARD_ACTIVITY_PREVIEW_INSTANCE = "slack-fixture";
+process.env.SWITCHBOARD_ACTIVITY_PREVIEW_EPOCH = "slack-fixture";
 fs.mkdirSync(process.env.SWITCHBOARD_DATA_DIR, { recursive: true });
 const load = (file) => import(pathToFileURL(path.join(core, file)).href),
   realFetch = globalThis.fetch;
@@ -122,6 +127,109 @@ try {
     user,
   );
   const { execute } = await load("server/proxy.ts");
+  const output = await load("server/activity-output.ts");
+  const { openPreviewStore } = await load("shared/activity-preview-store.ts");
+  openPreviewStore(previewRoot, [process.env.SWITCHBOARD_DATA_DIR], "slack-fixture");
+  const { config } = await load("server/config.ts");
+  config.previewStoreId = JSON.parse(
+    fs.readFileSync(path.join(previewRoot, "store.json"), "utf8"),
+  ).storeId;
+  output.initOutputStore();
+  assert.equal(output.outputCaptureAvailability().available, true);
+  output.setOutputRetention(4);
+
+  const caller = {
+    source: "proxy",
+    tokenId: null,
+    tokenName: null,
+    ip: null,
+    userAgent: null,
+  };
+  const projected = { nativeUnreadCoverage: "only_where_returned" };
+  const audited = async (
+    id,
+    { url = "/capabilities", method = "GET", reply, requests = 1 } = {},
+  ) => {
+    const origin = manager.service("slack").outputPreviews[0].origin;
+    const fetch = globalThis.fetch;
+    let upstream;
+    let count = 0;
+    globalThis.fetch = async (input, opts) => {
+      if (String(input).startsWith("http://127.0.0.1:")) {
+        assert.equal(new URL(input).origin, origin);
+        count++;
+        const response = reply ? reply(opts, count) : await fetch(input, opts);
+        if (count === requests) upstream = response.clone();
+        return response;
+      }
+      return fetch(input, opts);
+    };
+    try {
+      const result = await execute(user, id, { method, url }, undefined, caller);
+      assert.ok(result.auditId);
+      assert.equal(count, requests);
+      assert.equal(result.response.status, upstream.status);
+      assert.deepEqual([...result.response.headers], [...upstream.headers]);
+      const body = Buffer.from(await result.response.arrayBuffer());
+      assert.deepEqual(body, Buffer.from(await upstream.arrayBuffer()));
+      const recorded = output.readOutput(user.id, result.auditId, true);
+      assert.equal(output.readOutput(user.id, result.auditId, false).preview, undefined);
+      return { body, ...recorded };
+    } finally {
+      globalThis.fetch = fetch;
+    }
+  };
+
+  const checkCapabilities = async (id, authentication, scopes) => {
+    const before = network.length;
+    const result = await audited(id);
+    assert.equal(network.length, before + 1, "capabilities only calls loopback");
+    const body = JSON.parse(result.body);
+    assert.equal(body.authentication, authentication);
+    assert.equal(body.workspace, "T12345678");
+    assert.equal(body.user, "U12345678");
+    assert.deepEqual(body.scopes, scopes);
+    assert.deepEqual(result.preview, projected);
+  };
+
+  const firstOrigin = manager.service("slack").outputPreviews[0].origin;
+  await checkCapabilities(connection.id, "oauth", scopesFor("write"));
+  for (const options of [
+    { url: "/status", reply: () => Response.json(projected) },
+    { url: "/capabilities?unexpected=true" },
+    { url: "/capabilities?unexpected=true", reply: () => Response.json(projected) },
+    { method: "HEAD" },
+    { reply: (opts) => Response.json({
+      nativeUnreadCoverage: new Headers(opts.headers).get("authorization").slice(7),
+    }) },
+    { reply: () => Response.json({ nativeUnreadCoverage: "é".repeat(17) }) },
+    { reply: () => Response.json(projected, { status: 503 }) },
+    { reply: () => new Response(null, { status: 204 }) },
+    { reply: () => new Response(JSON.stringify(projected)) },
+    { reply: () => Response.json({ nested: projected }) },
+    { reply: () => new Response("{", { headers: { "content-type": "application/json" } }) },
+  ]) {
+    assert.equal((await audited(connection.id, options)).state, "omitted");
+  }
+  const emptySize = Buffer.byteLength(JSON.stringify({ ...projected, padding: "" }));
+  for (const size of [16_384, 16_385]) {
+    const { preview } = await audited(connection.id, {
+      reply: () => Response.json({
+        ...projected,
+        padding: "x".repeat(size - emptySize),
+      }),
+    });
+    assert.deepEqual(preview, size === 16_384 ? projected : undefined);
+  }
+  output.setOutputRetention(0);
+  assert.equal((await audited(connection.id)).state, "disabled");
+  assert.equal(database.one("SELECT count(*) AS count FROM audit_outputs").count, 0);
+  output.setOutputRetention(4);
+  config.previewRestoreSafe = false;
+  output.initOutputStore();
+  assert.equal((await audited(connection.id)).state, "omitted");
+  config.previewRestoreSafe = true;
+  output.initOutputStore();
   let r = await execute(user, connection.id, { method: "GET", url: "/status" });
   assert.equal(r.response.status, 200);
   assert.equal((await r.response.json()).ready, true);
@@ -201,6 +309,19 @@ try {
     config: { authenticationSource: sourceId, access: "read" },
   });
   assert.equal(webFlow.status, "connected");
+  assert.notEqual(manager.service("slack").outputPreviews[0].origin, firstOrigin);
+  await checkCapabilities(connection.id, "oauth", scopesFor("write"));
+  await checkCapabilities(webFlow.connection.id, "web-session", []);
+  assert.equal((await audited(webFlow.connection.id, {
+    reply: () => Response.json({ nativeUnreadCoverage: webBundle.cookie }),
+  })).state, "omitted");
+  const retry = await audited(connection.id, {
+    requests: 2,
+    reply: (_, count) => count === 1
+      ? Response.json({ error: "retry" }, { status: 401 })
+      : Response.json(projected),
+  });
+  assert.deepEqual(retry.preview, projected);
   r = await execute(user, webFlow.connection.id, {
     method: "GET",
     url: "/status?renew=true",
@@ -225,7 +346,9 @@ try {
   await assert.rejects(
     execute(user, webFlow.connection.id, { method: "GET", url: "/status" }),
   );
-  const sourceMethods = manager.service("slack-authentication").authMethods;
+  const sourceService = manager.service("slack-authentication");
+  assert.equal(sourceService.outputPreviews, undefined);
+  const sourceMethods = sourceService.authMethods;
   assert(
     sourceMethods.some(
       (m) =>
@@ -243,7 +366,7 @@ try {
       ),
   );
   console.log(
-    "PASS: actual GitHub installer, plugin manager, OAuth callback, proxy, API discovery, refresh persistence and restart; fixture providers only",
+    "PASS: actual GitHub installer, plugin manager, OAuth callback, proxy, activity previews, API discovery, refresh persistence and restart; fixture providers only",
   );
 } finally {
   await manager?.stop();

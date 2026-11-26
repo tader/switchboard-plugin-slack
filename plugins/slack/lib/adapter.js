@@ -127,6 +127,13 @@ export async function createAdapter(
         icon: "icon.svg",
         baseUrl: "http://slack.localhost",
         allowedHosts: ["slack.localhost", origin.host],
+        outputPreviews: [{
+          origin: origin.origin,
+          method: /** @type {const} */ ("GET"),
+          path: "/capabilities",
+          authMethods: ["oauth", "authentication-source"],
+          fields: { nativeUnreadCoverage: { maxBytes: 32 } },
+        }],
         openapi,
         contracts: createMessaging(
           ctx.dataDir,

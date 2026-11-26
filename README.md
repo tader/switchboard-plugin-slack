@@ -34,13 +34,22 @@ See [contract coverage and limitations](plugins/slack/docs/messaging-contract.md
 The core feature remains disabled by default. Desktop/web session push uses the imported session automatically; Socket Mode for OAuth requires explicit
 Slack app/token setup; bounded reconciliation remains available without it.
 
+## Activity response previews
+
+On Switchboard 0.17.0 with preview storage enabled, audited query-free
+`GET /capabilities` calls can retain only the top-level
+`nativeUnreadCoverage` string, up to 32 UTF-8 bytes. The rule matches the
+loopback origin assigned at setup and covers OAuth and Authentication Source
+connections. Workspace, user and scopes stay in the caller's response.
+Slack Authentication, message routes, and Socket Mode events have no preview.
+
 ## Development
 
 ```sh
 npm ci
 npm run check
 npm test
-SWITCHBOARD_ROOT=/path/to/switchboard npm run integration
+SWITCHBOARD_ROOT=/path/to/switchboard-0.17.0 npm run integration
 SWITCHBOARD_ROOT=/path/to/staged-contract-core npm run integration:contracts
 SWITCHBOARD_ROOT=/path/to/staged-contract-core npm run integration:native
 ```
