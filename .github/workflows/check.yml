@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: tader/switchboard
-          ref: 55e538e6e20f6f16af20a632b02dc37825917149
+          ref: e0abe3b7deae20036f90ee0e2b36e23f70b1523e # Switchboard 0.17.0
           path: switchboard-core
       - run: npm ci --prefix switchboard-core
       - run: npm run integration
