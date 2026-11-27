@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/tader/switchboard-plugin-slack/compare/v1.3.1...v1.4.0) (2026-11-27)
+
+
+### Features
+
+* add reviewed activity response previews ([fbf66c5](https://github.com/tader/switchboard-plugin-slack/commit/fbf66c5d94c62a7b84cce63e84fefafa983de093))
+
 ## [1.3.1](https://github.com/tader/switchboard-plugin-slack/compare/v1.3.0...v1.3.1) (2026-11-10)
 
 
